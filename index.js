@@ -7,16 +7,13 @@ const jalaali = require('jalaali-js');
 const fs = require('fs');
 
 // ===================== CONFIG =====================
-
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const OWNER_ID = Number(process.env.OWNER_ID);
-
 const UPDATE_INTERVAL = 60000;
 const DATA_FILE = './channels.json';
 
 // ===================== DATABASE =====================
-
 let db = { channels: [] };
 
 if (fs.existsSync(DATA_FILE)) {
@@ -28,18 +25,9 @@ function saveDB() {
 }
 
 // ===================== FANCY FONT =====================
-
 const fancyMap = {
-  '0': '𝟬',
-  '1': '𝟭',
-  '2': '𝟮',
-  '3': '𝟯',
-  '4': '𝟰',
-  '5': '𝟱',
-  '6': '𝟲',
-  '7': '𝟳',
-  '8': '𝟴',
-  '9': '𝟵'
+  '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰',
+  '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
 };
 
 function fancyText(text) {
@@ -47,9 +35,12 @@ function fancyText(text) {
 }
 
 // ===================== TIME =====================
-
 function tehranTime() {
   return moment().tz('Asia/Tehran').format('HH:mm');
+}
+
+function tehranTimeFancy() {
+  return fancyText(tehranTime());
 }
 
 function jalaliDate() {
@@ -68,17 +59,15 @@ function clockEmoji() {
 }
 
 // ===================== BUILD TITLE & BIO =====================
-
 function buildTitle(prefix = '') {
-  const time = fancyText(tehranTime());
-  return `${clockEmoji()} ${prefix} ${time}`.trim();
+  return `${clockEmoji()} ${prefix} ${tehranTimeFancy()}`.trim();
 }
 
 function buildBio() {
   return `
 🟢 LIVE CLOCK
 
-🕒 ${tehranTime()}
+🕒 ${tehranTimeFancy()}
 📅 ${jalaliDate()}
 🌍 Asia/Tehran
 
@@ -86,29 +75,26 @@ Powered By Clock Bot ⚡
 `.trim();
 }
 
-// ===================== OWNER CHECK =====================
-
-function isOwner(id) {
-  return id === OWNER_ID;
-}
-
-// ===================== DELETE SERVICE MESSAGE (اصلی) =====================
-
+// ===================== DELETE SERVICE MESSAGE =====================
 bot.on('channel_post', async (ctx) => {
   if (ctx.channelPost?.new_chat_title) {
     try {
       await ctx.deleteMessage();
       console.log(`🗑 Service message deleted | Channel: ${ctx.chat.id}`);
     } catch (err) {
-      if (!err.description?.includes('not found') && !err.description?.includes('message to delete')) {
+      if (!err.description?.includes('not found')) {
         console.log('Delete error:', err.description || err.message);
       }
     }
   }
 });
 
-// ===================== COMMANDS =====================
+// ===================== OWNER CHECK =====================
+function isOwner(id) {
+  return id === OWNER_ID;
+}
 
+// ===================== COMMANDS =====================
 bot.start((ctx) => {
   if (!isOwner(ctx.from.id)) return;
   ctx.reply(`
@@ -132,10 +118,10 @@ bot.command('help', (ctx) => {
   ctx.reply(`
 📌 مثال:
 
-/add -1001234567890 KoreaMix •
+/add -1001234567890 Iran •
 
 نتیجه:
-🕒 KoreaMix • 𝟮𝟭:𝟰𝟱
+🕒 Iran • 𝟭𝟰:𝟯𝟬
 `.trim());
 });
 
@@ -145,7 +131,7 @@ bot.command('add', (ctx) => {
   const chatId = Number(parts[1]);
   const prefix = parts.slice(2).join(' ') || '';
 
-  if (!chatId) return ctx.reply('❌ Usage: /add -100xxxxxxxxxx PREFIX');
+  if (!chatId) return ctx.reply('❌ Usage:\n/add -100xxxxxxxxxx PREFIX');
 
   if (db.channels.find(c => c.chatId === chatId)) {
     return ctx.reply('⚠️ Already Exists');
@@ -153,7 +139,7 @@ bot.command('add', (ctx) => {
 
   db.channels.push({ chatId, prefix, enabled: true, lastTitle: '' });
   saveDB();
-  ctx.reply('✅ Added');
+  ctx.reply('✅ Channel Added');
 });
 
 bot.command('remove', (ctx) => {
@@ -172,17 +158,9 @@ bot.command('list', (ctx) => {
 ID: ${c.chatId}
 Prefix: ${c.prefix || 'بدون پیشوند'}
 Status: ${c.enabled ? '🟢 ON' : '🔴 OFF'}
-`).join('\n\n');
+  `.trim()).join('\n\n');
   ctx.reply(text);
 });
-
-bot.command('on', (ctx) => { /* ... */ });
-bot.command('off', (ctx) => { /* ... */ });
-bot.command('setprefix', (ctx) => { /* ... */ });
-bot.command('startclock', (ctx) => { /* ... */ });
-bot.command('stopclock', (ctx) => { /* ... */ });
-
-// (برای کوتاه شدن پیام، بقیه کامندها رو مثل کد قبلی نگه داشتم)
 
 bot.command('on', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
@@ -231,7 +209,6 @@ bot.command('stopclock', (ctx) => {
 });
 
 // ===================== CLOCK LOOP =====================
-
 async function updateChannels() {
   for (const channel of db.channels) {
     if (!channel.enabled) continue;
@@ -257,15 +234,13 @@ async function updateChannels() {
 }
 
 // ===================== AUTO LOOP =====================
-
 setInterval(updateChannels, UPDATE_INTERVAL);
-updateChannels();
+updateChannels(); // اولین اجرا
 
 // ===================== LAUNCH =====================
-
 bot.launch()
   .then(() => console.log('🚀 Clock Bot Started'))
-  .catch(err => console.error('Launch Error:', err));
+  .catch(err => console.error(err));
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
