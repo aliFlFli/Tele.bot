@@ -20,187 +20,125 @@ const DATA_FILE = './channels.json';
 let db = { channels: [] };
 
 if (fs.existsSync(DATA_FILE)) {
-  db = JSON.parse(
-    fs.readFileSync(DATA_FILE, 'utf8')
-  );
+  db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
 }
 
 function saveDB() {
-  fs.writeFileSync(
-    DATA_FILE,
-    JSON.stringify(db, null, 2)
-  );
+  fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 }
 
 // ===================== FANCY NUMBER FONT =====================
 
 const fancyMap = {
-  '0': '𝟬',
-  '1': '𝟭',
-  '2': '𝟮',
-  '3': '𝟯',
-  '4': '𝟰',
-  '5': '𝟱',
-  '6': '𝟲',
-  '7': '𝟳',
-  '8': '𝟴',
-  '9': '𝟵'
+  '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰',
+  '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'
 };
 
 function fancyText(text) {
-
-  return text.replace(/\d/g, d => {
-    return fancyMap[d] || d;
-  });
-
+  return text.replace(/\d/g, d => fancyMap[d] || d);
 }
 
 // ===================== FANCY ENGLISH FONT =====================
 
 const fontMap = {
-  a:'𝗮', b:'𝗯', c:'𝗰', d:'𝗱', e:'𝗲',
-  f:'𝗳', g:'𝗴', h:'𝗵', i:'𝗶', j:'𝗷',
-  k:'𝗸', l:'𝗹', m:'𝗺', n:'𝗻', o:'𝗼',
-  p:'𝗽', q:'𝗾', r:'𝗿', s:'𝘀', t:'𝘁',
-  u:'𝘂', v:'𝘃', w:'𝘄', x:'𝘅', y:'𝘆',
-  z:'𝘇'
+  a:'𝗮', b:'𝗯', c:'𝗰', d:'𝗱', e:'𝗲', f:'𝗳', g:'𝗴', h:'𝗵',
+  i:'𝗶', j:'𝗷', k:'𝗸', l:'𝗹', m:'𝗺', n:'𝗻', o:'𝗼', p:'𝗽',
+  q:'𝗾', r:'𝗿', s:'𝘀', t:'𝘁', u:'𝘂', v:'𝘃', w:'𝘄', x:'𝘅',
+  y:'𝘆', z:'𝘇'
 };
 
 function fancyEnglish(text) {
-
   return text.replace(/[a-z]/gi, c => {
-
     const lower = c.toLowerCase();
-
     return fontMap[lower] || c;
-
   });
-
 }
 
 // ===================== TIME =====================
 
 function tehranTime() {
-
-  return moment()
-    .tz('Asia/Tehran')
-    .format('HH:mm');
-
+  return moment().tz('Asia/Tehran').format('HH:mm');
 }
 
 function tehranTimeFancy() {
-
-  return fancyText(
-    tehranTime()
-  );
-
+  return fancyText(tehranTime());
 }
 
 function jalaliDate() {
-
   const now = new Date();
-
   const j = jalaali.toJalaali(now);
-
   const year = String(j.jy);
-
-  const month = String(j.jm)
-    .padStart(2, '0');
-
-  const day = String(j.jd)
-    .padStart(2, '0');
-
-  return fancyText(
-    `${year}/${month}/${day}`
-  );
-
+  const month = String(j.jm).padStart(2, '0');
+  const day = String(j.jd).padStart(2, '0');
+  return fancyText(`\( {year}/ \){month}/${day}`);
 }
 
 // ===================== CLOCK EMOJI =====================
 
 function clockEmoji() {
-
-  const hour = Number(
-    moment()
-      .tz('Asia/Tehran')
-      .format('h')
-  );
-
+  const hour = Number(moment().tz('Asia/Tehran').format('h'));
   const emojis = {
-    1: '🕐',
-    2: '🕑',
-    3: '🕒',
-    4: '🕓',
-    5: '🕔',
-    6: '🕕',
-    7: '🕖',
-    8: '🕗',
-    9: '🕘',
-    10: '🕙',
-    11: '🕚',
-    12: '🕛'
+    1: '🕐', 2: '🕑', 3: '🕒', 4: '🕓', 5: '🕔', 6: '🕕',
+    7: '🕖', 8: '🕗', 9: '🕘', 10: '🕙', 11: '🕚', 12: '🕛'
   };
-
   return emojis[hour] || '🕒';
-
 }
 
 // ===================== BUILD TITLE =====================
 
 function buildTitle(prefix = '') {
-
-  return `${clockEmoji()} ${prefix} ${tehranTimeFancy()}`
-    .trim();
-
+  return `${clockEmoji()} ${prefix} ${tehranTimeFancy()}`.trim();
 }
 
-// ===================== BUILD BIO =====================
+// ===================== BUILD BIO (بهبود یافته) =====================
 
 function buildBio() {
+  const timeLine = `🕒 Time : ${tehranTimeFancy()}`;
+  const dateLine = `📅 Date : ${jalaliDate()}`;
+  const zoneLine = `🌍 Zone : ${fancyEnglish('Asia/Tehran')}`;
+
+  const centeredTime = centerText(timeLine, 34);
+  const centeredDate = centerText(dateLine, 34);
+  const centeredZone = centerText(zoneLine, 34);
 
   return `
 ╭──⌈ ⏰ ${fancyEnglish('LIVE CLOCK')} ⌋──╮
 
-🕒 Time : ${tehranTimeFancy()}
-📅 Date : ${jalaliDate()}
-🌍 Zone : ${fancyEnglish('Asia/Tehran')}
+${centeredTime}
+${centeredDate}
+${centeredZone}
 
 ╰─────⚡─────╯
 `.trim();
+}
 
+// تابع وسط‌چین پیشرفته
+function centerText(text, width = 34) {
+  let visualLength = text.length;
+
+  // جبران عرض اضافی کاراکترهای خاص
+  visualLength += (text.match(/[🕒📅🌍]/g) || []).length * 1;     // ایموجی‌ها
+  visualLength += (text.match(/[𝟎-𝟵]/g) || []).length * 0.4;    // اعداد فانتزی
+  visualLength += (text.match(/[𝗮-𝘇]/g) || []).length * 0.3;    // حروف فانتزی
+
+  const padding = Math.max(0, width - Math.round(visualLength));
+  const leftPad = Math.floor(padding / 2);
+
+  return ' '.repeat(leftPad) + text;
 }
 
 // ===================== DELETE SERVICE MESSAGE =====================
 
 bot.on('channel_post', async (ctx) => {
-
   if (ctx.channelPost?.new_chat_title) {
-
     try {
-
       await ctx.deleteMessage();
-
-      console.log(
-        `🗑 Deleted Service Message | ${ctx.chat.id}`
-      );
-
     } catch (err) {
-
-      if (
-        !err.description?.includes('not found')
-      ) {
-
-        console.log(
-          'Delete Error:',
-          err.description || err.message
-        );
-
+      if (!err.description?.includes('not found')) {
+        console.log('Delete Error:', err.description || err.message);
       }
-
     }
-
   }
-
 });
 
 // ===================== OWNER CHECK =====================
@@ -209,17 +147,14 @@ function isOwner(id) {
   return id === OWNER_ID;
 }
 
-// ===================== START =====================
+// ===================== COMMANDS =====================
 
 bot.start((ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   ctx.reply(`
 ✅ Clock Bot Online
 
 Commands:
-
 /add CHAT_ID PREFIX
 /remove CHAT_ID
 /list
@@ -230,15 +165,10 @@ Commands:
 /stopclock
 /help
 `.trim());
-
 });
 
-// ===================== HELP =====================
-
 bot.command('help', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   ctx.reply(`
 📌 Example:
 
@@ -247,314 +177,139 @@ bot.command('help', (ctx) => {
 Result:
 🕒 Iran • 𝟭𝟰:𝟰𝟱
 `.trim());
-
 });
 
 // ===================== ADD =====================
 
 bot.command('add', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   const parts = ctx.message.text.split(' ');
-
   const chatId = Number(parts[1]);
+  const prefix = parts.slice(2).join(' ') || '';
 
-  const prefix =
-    parts.slice(2).join(' ') || '';
+  if (!chatId) return ctx.reply('❌ Usage:\n/add -100xxxxxxxxxx PREFIX');
 
-  if (!chatId) {
-
-    return ctx.reply(
-      '❌ Usage:\n/add -100xxxxxxxxxx PREFIX'
-    );
-
+  if (db.channels.find(c => c.chatId === chatId)) {
+    return ctx.reply('⚠️ Already Exists');
   }
 
-  const exists = db.channels.find(
-    c => c.chatId === chatId
-  );
-
-  if (exists) {
-
-    return ctx.reply(
-      '⚠️ Already Exists'
-    );
-
-  }
-
-  db.channels.push({
-    chatId,
-    prefix,
-    enabled: true,
-    lastTitle: ''
-  });
-
+  db.channels.push({ chatId, prefix, enabled: true, lastTitle: '' });
   saveDB();
-
   ctx.reply('✅ Added');
-
 });
 
 // ===================== REMOVE =====================
 
 bot.command('remove', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  db.channels = db.channels.filter(
-    c => c.chatId !== chatId
-  );
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  db.channels = db.channels.filter(c => c.chatId !== chatId);
   saveDB();
-
   ctx.reply('🗑 Removed');
-
 });
 
 // ===================== LIST =====================
 
 bot.command('list', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  if (!db.channels.length) {
-
-    return ctx.reply('Empty');
-
-  }
+  if (!db.channels.length) return ctx.reply('Empty');
 
   const text = db.channels.map(c => `
 ID : ${c.chatId}
-
 Prefix : ${c.prefix || 'None'}
-
-Status : ${
-  c.enabled
-    ? '🟢 ON'
-    : '🔴 OFF'
-}
+Status : ${c.enabled ? '🟢 ON' : '🔴 OFF'}
 `.trim()).join('\n\n');
-
   ctx.reply(text);
-
 });
 
-// ===================== ON =====================
+// ===================== ON / OFF =====================
 
 bot.command('on', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
-  if (!ch) {
-
-    return ctx.reply('Not Found');
-
-  }
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  const ch = db.channels.find(c => c.chatId === chatId);
+  if (!ch) return ctx.reply('Not Found');
   ch.enabled = true;
-
   saveDB();
-
   ctx.reply('🟢 Enabled');
-
 });
 
-// ===================== OFF =====================
-
 bot.command('off', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
-  if (!ch) {
-
-    return ctx.reply('Not Found');
-
-  }
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  const ch = db.channels.find(c => c.chatId === chatId);
+  if (!ch) return ctx.reply('Not Found');
   ch.enabled = false;
-
   saveDB();
-
   ctx.reply('🔴 Disabled');
-
 });
 
 // ===================== SET PREFIX =====================
 
 bot.command('setprefix', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   const parts = ctx.message.text.split(' ');
-
   const chatId = Number(parts[1]);
-
-  const prefix =
-    parts.slice(2).join(' ');
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
-  if (!ch) {
-
-    return ctx.reply('Not Found');
-
-  }
-
+  const prefix = parts.slice(2).join(' ');
+  const ch = db.channels.find(c => c.chatId === chatId);
+  if (!ch) return ctx.reply('Not Found');
   ch.prefix = prefix;
-
   saveDB();
-
   ctx.reply('✅ Prefix Updated');
-
 });
 
-// ===================== START CLOCK =====================
+// ===================== START / STOP =====================
 
 bot.command('startclock', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  db.channels.forEach(c => {
-    c.enabled = true;
-  });
-
+  db.channels.forEach(c => c.enabled = true);
   saveDB();
-
   ctx.reply('⏱ Clock Started');
-
 });
 
-// ===================== STOP CLOCK =====================
-
 bot.command('stopclock', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  db.channels.forEach(c => {
-    c.enabled = false;
-  });
-
+  db.channels.forEach(c => c.enabled = false);
   saveDB();
-
   ctx.reply('⛔ Clock Stopped');
-
 });
 
 // ===================== CLOCK LOOP =====================
 
 async function updateChannels() {
-
   for (const channel of db.channels) {
-
     if (!channel.enabled) continue;
 
     try {
+      const newTitle = buildTitle(channel.prefix);
 
-      const newTitle =
-        buildTitle(channel.prefix);
+      if (channel.lastTitle === newTitle) continue;
 
-      if (
-        channel.lastTitle === newTitle
-      ) {
-
-        continue;
-
-      }
-
-      // update title
-      await bot.telegram.setChatTitle(
-        channel.chatId,
-        newTitle
-      );
-
-      // update bio
-      await bot.telegram.setChatDescription(
-        channel.chatId,
-        buildBio()
-      );
+      await bot.telegram.setChatTitle(channel.chatId, newTitle);
+      await bot.telegram.setChatDescription(channel.chatId, buildBio());
 
       channel.lastTitle = newTitle;
-
       saveDB();
 
-      console.log(
-        `✅ Updated ${channel.chatId}`
-      );
-
+      console.log(`✅ Updated ${channel.chatId}`);
     } catch (err) {
-
-      console.log(
-        `❌ ${channel.chatId} |`,
-        err.description || err.message
-      );
-
+      console.log(`❌ ${channel.chatId} |`, err.description || err.message);
     }
 
-    // anti flood
-    await new Promise(r =>
-      setTimeout(r, 2500)
-    );
-
+    await new Promise(r => setTimeout(r, 2500));
   }
-
 }
 
 // ===================== AUTO LOOP =====================
 
-setInterval(
-  updateChannels,
-  UPDATE_INTERVAL
-);
-
+setInterval(updateChannels, UPDATE_INTERVAL);
 updateChannels();
 
 // ===================== LAUNCH =====================
 
 bot.launch({
-  allowedUpdates: [
-    'message',
-    'channel_post'
-  ]
-})
-.then(() => {
+  allowedUpdates: ['message', 'channel_post']
+}).then(() => console.log('🚀 Clock Bot Started'));
 
-  console.log(
-    '🚀 Clock Bot Started'
-  );
-
-});
-
-// ===================== SAFE STOP =====================
-
-process.once(
-  'SIGINT',
-  () => bot.stop('SIGINT')
-);
-
-process.once(
-  'SIGTERM',
-  () => bot.stop('SIGTERM')
-);
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
