@@ -90,16 +90,18 @@ function buildTitle(prefix = '') {
   return `${clockEmoji()} ${prefix} ${tehranTimeFancy()}`.trim();
 }
 
-// ===================== BUILD BIO (ساده و پایدار) =====================
+// ===================== BUILD BIO (اصلاح شده) =====================
 
 function buildBio() {
   const timeLine = `🕒 Time : ${tehranTimeFancy()}`;
   const dateLine = `📅 Date : ${jalaliDate()}`;
   const zoneLine = `🌍 Zone : ${fancyEnglish('Asia/Tehran')}`;
 
-  const centeredTime = centerText(timeLine);
-  const centeredDate = centerText(dateLine);
-  const centeredZone = centerText(zoneLine);
+  const maxWidth = 32; // بهترین عرض برای وسط چین شدن
+
+  const centeredTime = centerText(timeLine, maxWidth);
+  const centeredDate = centerText(dateLine, maxWidth);
+  const centeredZone = centerText(zoneLine, maxWidth);
 
   return `
 ╭──⌈ ⏰ ${fancyEnglish('LIVE CLOCK')} ⌋──╮
@@ -112,9 +114,8 @@ ${centeredZone}
 `.trim();
 }
 
-// تابع وسط‌چین ساده و بدون کرش
-function centerText(text) {
-  const width = 34;
+// تابع وسط چین کردن
+function centerText(text, width) {
   const padding = Math.max(0, width - text.length);
   const leftPad = Math.floor(padding / 2);
   return ' '.repeat(leftPad) + text;
@@ -172,7 +173,8 @@ Result:
 `.trim());
 });
 
-// بقیه کامندها بدون تغییر
+// ===================== ADD =====================
+
 bot.command('add', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const parts = ctx.message.text.split(' ');
@@ -190,6 +192,8 @@ bot.command('add', (ctx) => {
   ctx.reply('✅ Added');
 });
 
+// ===================== REMOVE =====================
+
 bot.command('remove', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const chatId = Number(ctx.message.text.split(' ')[1]);
@@ -197,6 +201,8 @@ bot.command('remove', (ctx) => {
   saveDB();
   ctx.reply('🗑 Removed');
 });
+
+// ===================== LIST =====================
 
 bot.command('list', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
@@ -209,6 +215,8 @@ Status : ${c.enabled ? '🟢 ON' : '🔴 OFF'}
 `.trim()).join('\n\n');
   ctx.reply(text);
 });
+
+// ===================== ON / OFF =====================
 
 bot.command('on', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
@@ -230,6 +238,8 @@ bot.command('off', (ctx) => {
   ctx.reply('🔴 Disabled');
 });
 
+// ===================== SET PREFIX =====================
+
 bot.command('setprefix', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const parts = ctx.message.text.split(' ');
@@ -241,6 +251,8 @@ bot.command('setprefix', (ctx) => {
   saveDB();
   ctx.reply('✅ Prefix Updated');
 });
+
+// ===================== START / STOP CLOCK =====================
 
 bot.command('startclock', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
