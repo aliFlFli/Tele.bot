@@ -46,7 +46,8 @@ function tehranTimeFancy() {
 function jalaliDate() {
   const now = new Date();
   const j = jalaali.toJalaali(now);
-  return `\( {j.jy}/ \){String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`;
+  const dateStr = `\( {j.jy}/ \){String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`;
+  return fancyText(dateStr);   // ← فونت اعداد تاریخ
 }
 
 function clockEmoji() {
@@ -80,7 +81,7 @@ bot.on('channel_post', async (ctx) => {
   if (ctx.channelPost?.new_chat_title) {
     try {
       await ctx.deleteMessage();
-      console.log(`🗑 Service message deleted | Channel: ${ctx.chat.id}`);
+      console.log(`🗑 Deleted service message | ${ctx.chat.id}`);
     } catch (err) {
       if (!err.description?.includes('not found')) {
         console.log('Delete error:', err.description || err.message);
@@ -115,14 +116,7 @@ Commands:
 
 bot.command('help', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
-  ctx.reply(`
-📌 مثال:
-
-/add -1001234567890 Iran •
-
-نتیجه:
-🕒 Iran • 𝟭𝟰:𝟯𝟬
-`.trim());
+  ctx.reply(`📌 مثال:\n/add -1001234567890 Iran •`);
 });
 
 bot.command('add', (ctx) => {
@@ -131,15 +125,13 @@ bot.command('add', (ctx) => {
   const chatId = Number(parts[1]);
   const prefix = parts.slice(2).join(' ') || '';
 
-  if (!chatId) return ctx.reply('❌ Usage:\n/add -100xxxxxxxxxx PREFIX');
+  if (!chatId) return ctx.reply('❌ /add -100xxxxxxxxxx PREFIX');
 
-  if (db.channels.find(c => c.chatId === chatId)) {
-    return ctx.reply('⚠️ Already Exists');
-  }
+  if (db.channels.find(c => c.chatId === chatId)) return ctx.reply('⚠️ Already Exists');
 
   db.channels.push({ chatId, prefix, enabled: true, lastTitle: '' });
   saveDB();
-  ctx.reply('✅ Channel Added');
+  ctx.reply('✅ Added');
 });
 
 bot.command('remove', (ctx) => {
@@ -156,7 +148,7 @@ bot.command('list', (ctx) => {
 
   const text = db.channels.map(c => `
 ID: ${c.chatId}
-Prefix: ${c.prefix || 'بدون پیشوند'}
+Prefix: ${c.prefix || 'بدون'}
 Status: ${c.enabled ? '🟢 ON' : '🔴 OFF'}
   `.trim()).join('\n\n');
   ctx.reply(text);
@@ -167,9 +159,7 @@ bot.command('on', (ctx) => {
   const chatId = Number(ctx.message.text.split(' ')[1]);
   const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-  ch.enabled = true;
-  saveDB();
-  ctx.reply('🟢 Enabled');
+  ch.enabled = true; saveDB(); ctx.reply('🟢 Enabled');
 });
 
 bot.command('off', (ctx) => {
@@ -177,9 +167,7 @@ bot.command('off', (ctx) => {
   const chatId = Number(ctx.message.text.split(' ')[1]);
   const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-  ch.enabled = false;
-  saveDB();
-  ctx.reply('🔴 Disabled');
+  ch.enabled = false; saveDB(); ctx.reply('🔴 Disabled');
 });
 
 bot.command('setprefix', (ctx) => {
@@ -189,23 +177,19 @@ bot.command('setprefix', (ctx) => {
   const prefix = parts.slice(2).join(' ');
   const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-  ch.prefix = prefix;
-  saveDB();
-  ctx.reply('✅ Prefix Updated');
+  ch.prefix = prefix; saveDB(); ctx.reply('✅ Updated');
 });
 
 bot.command('startclock', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   db.channels.forEach(c => c.enabled = true);
-  saveDB();
-  ctx.reply('⏱ Clock Started');
+  saveDB(); ctx.reply('⏱ Started');
 });
 
 bot.command('stopclock', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   db.channels.forEach(c => c.enabled = false);
-  saveDB();
-  ctx.reply('⛔ Clock Stopped');
+  saveDB(); ctx.reply('⛔ Stopped');
 });
 
 // ===================== CLOCK LOOP =====================
@@ -229,18 +213,15 @@ async function updateChannels() {
       console.log(`❌ ${channel.chatId} |`, err.description || err.message);
     }
 
-    await new Promise(r => setTimeout(r, 2500)); // anti-flood
+    await new Promise(r => setTimeout(r, 2500));
   }
 }
 
 // ===================== AUTO LOOP =====================
 setInterval(updateChannels, UPDATE_INTERVAL);
-updateChannels(); // اولین اجرا
+updateChannels();
 
 // ===================== LAUNCH =====================
-bot.launch()
-  .then(() => console.log('🚀 Clock Bot Started'))
-  .catch(err => console.error(err));
-
+bot.launch().then(() => console.log('🚀 Clock Bot Started'));
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
