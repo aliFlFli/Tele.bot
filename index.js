@@ -49,61 +49,32 @@ function fancyText(text) {
 // ===================== TIME =====================
 
 function tehranTime() {
-  return moment()
-    .tz('Asia/Tehran')
-    .format('HH:mm');
+  return moment().tz('Asia/Tehran').format('HH:mm');
 }
 
 function jalaliDate() {
   const now = new Date();
-
   const j = jalaali.toJalaali(now);
-
-  return `${j.jy}/${String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`;
+  return `\( {j.jy}/ \){String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`;
 }
 
 function clockEmoji() {
-
-  const hour = Number(
-    moment()
-      .tz('Asia/Tehran')
-      .format('h')
-  );
-
+  const hour = Number(moment().tz('Asia/Tehran').format('h'));
   const emojis = {
-    1: '🕐',
-    2: '🕑',
-    3: '🕒',
-    4: '🕓',
-    5: '🕔',
-    6: '🕕',
-    7: '🕖',
-    8: '🕗',
-    9: '🕘',
-    10: '🕙',
-    11: '🕚',
-    12: '🕛'
+    1: '🕐', 2: '🕑', 3: '🕒', 4: '🕓', 5: '🕔', 6: '🕕',
+    7: '🕖', 8: '🕗', 9: '🕘', 10: '🕙', 11: '🕚', 12: '🕛'
   };
-
-  return emojis[hour];
+  return emojis[hour] || '🕒';
 }
 
-// ===================== BUILD TITLE =====================
+// ===================== BUILD TITLE & BIO =====================
 
 function buildTitle(prefix = '') {
-
-  const time = fancyText(
-    tehranTime()
-  );
-
+  const time = fancyText(tehranTime());
   return `${clockEmoji()} ${prefix} ${time}`.trim();
-
 }
 
-// ===================== BUILD BIO =====================
-
 function buildBio() {
-
   return `
 🟢 LIVE CLOCK
 
@@ -113,7 +84,6 @@ function buildBio() {
 
 Powered By Clock Bot ⚡
 `.trim();
-
 }
 
 // ===================== OWNER CHECK =====================
@@ -122,17 +92,29 @@ function isOwner(id) {
   return id === OWNER_ID;
 }
 
-// ===================== START =====================
+// ===================== DELETE SERVICE MESSAGE (اصلی) =====================
+
+bot.on('channel_post', async (ctx) => {
+  if (ctx.channelPost?.new_chat_title) {
+    try {
+      await ctx.deleteMessage();
+      console.log(`🗑 Service message deleted | Channel: ${ctx.chat.id}`);
+    } catch (err) {
+      if (!err.description?.includes('not found') && !err.description?.includes('message to delete')) {
+        console.log('Delete error:', err.description || err.message);
+      }
+    }
+  }
+});
+
+// ===================== COMMANDS =====================
 
 bot.start((ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   ctx.reply(`
 ✅ Clock Bot Online
 
 Commands:
-
 /add CHAT_ID PREFIX
 /remove CHAT_ID
 /list
@@ -143,350 +125,147 @@ Commands:
 /stopclock
 /help
 `.trim());
-
 });
 
-// ===================== HELP =====================
-
 bot.command('help', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   ctx.reply(`
-📌 Examples:
+📌 مثال:
 
 /add -1001234567890 KoreaMix •
 
-Example:
+نتیجه:
 🕒 KoreaMix • 𝟮𝟭:𝟰𝟱
 `.trim());
-
 });
 
-// ===================== ADD =====================
-
 bot.command('add', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   const parts = ctx.message.text.split(' ');
-
   const chatId = Number(parts[1]);
-
   const prefix = parts.slice(2).join(' ') || '';
 
-  if (!chatId) {
-    return ctx.reply(
-      '❌ Usage:\n/add -100xxxxxxxxxx PREFIX'
-    );
-  }
+  if (!chatId) return ctx.reply('❌ Usage: /add -100xxxxxxxxxx PREFIX');
 
-  const exists = db.channels.find(
-    c => c.chatId === chatId
-  );
-
-  if (exists) {
+  if (db.channels.find(c => c.chatId === chatId)) {
     return ctx.reply('⚠️ Already Exists');
   }
 
-  db.channels.push({
-    chatId,
-    prefix,
-    enabled: true,
-    lastTitle: ''
-  });
-
+  db.channels.push({ chatId, prefix, enabled: true, lastTitle: '' });
   saveDB();
-
   ctx.reply('✅ Added');
-
 });
-
-// ===================== REMOVE =====================
 
 bot.command('remove', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  db.channels = db.channels.filter(
-    c => c.chatId !== chatId
-  );
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  db.channels = db.channels.filter(c => c.chatId !== chatId);
   saveDB();
-
   ctx.reply('🗑 Removed');
-
 });
 
-// ===================== LIST =====================
-
 bot.command('list', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  if (!db.channels.length) {
-    return ctx.reply('Empty');
-  }
+  if (!db.channels.length) return ctx.reply('Empty');
 
   const text = db.channels.map(c => `
 ID: ${c.chatId}
-Prefix: ${c.prefix}
+Prefix: ${c.prefix || 'بدون پیشوند'}
 Status: ${c.enabled ? '🟢 ON' : '🔴 OFF'}
-`.trim()).join('\n\n');
-
+`).join('\n\n');
   ctx.reply(text);
-
 });
 
-// ===================== ON =====================
+bot.command('on', (ctx) => { /* ... */ });
+bot.command('off', (ctx) => { /* ... */ });
+bot.command('setprefix', (ctx) => { /* ... */ });
+bot.command('startclock', (ctx) => { /* ... */ });
+bot.command('stopclock', (ctx) => { /* ... */ });
+
+// (برای کوتاه شدن پیام، بقیه کامندها رو مثل کد قبلی نگه داشتم)
 
 bot.command('on', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-
   ch.enabled = true;
-
   saveDB();
-
   ctx.reply('🟢 Enabled');
-
 });
-
-// ===================== OFF =====================
 
 bot.command('off', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  const chatId = Number(
-    ctx.message.text.split(' ')[1]
-  );
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
+  const chatId = Number(ctx.message.text.split(' ')[1]);
+  const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-
   ch.enabled = false;
-
   saveDB();
-
   ctx.reply('🔴 Disabled');
-
 });
-
-// ===================== SET PREFIX =====================
 
 bot.command('setprefix', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
   const parts = ctx.message.text.split(' ');
-
   const chatId = Number(parts[1]);
-
   const prefix = parts.slice(2).join(' ');
-
-  const ch = db.channels.find(
-    c => c.chatId === chatId
-  );
-
+  const ch = db.channels.find(c => c.chatId === chatId);
   if (!ch) return ctx.reply('Not Found');
-
   ch.prefix = prefix;
-
   saveDB();
-
-  ctx.reply('✅ Updated');
-
+  ctx.reply('✅ Prefix Updated');
 });
-
-// ===================== START CLOCK =====================
 
 bot.command('startclock', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  db.channels.forEach(c => {
-    c.enabled = true;
-  });
-
+  db.channels.forEach(c => c.enabled = true);
   saveDB();
-
-  ctx.reply('⏱ Started');
-
+  ctx.reply('⏱ Clock Started');
 });
-
-// ===================== STOP CLOCK =====================
 
 bot.command('stopclock', (ctx) => {
-
   if (!isOwner(ctx.from.id)) return;
-
-  db.channels.forEach(c => {
-    c.enabled = false;
-  });
-
+  db.channels.forEach(c => c.enabled = false);
   saveDB();
-
-  ctx.reply('⛔ Stopped');
-
+  ctx.reply('⛔ Clock Stopped');
 });
-
-// ===================== DELETE SERVICE MESSAGE =====================
-
-async function deleteServiceMessage(chatId) {
-
-  try {
-
-    const updates = await bot.telegram.getUpdates({
-      limit: 15,
-      allowed_updates: ['channel_post']
-    });
-
-    for (const upd of updates) {
-
-      const post = upd.channel_post;
-
-      if (!post) continue;
-
-      if (post.chat.id !== chatId) continue;
-
-      if (post.new_chat_title) {
-
-        try {
-
-          await bot.telegram.deleteMessage(
-            chatId,
-            post.message_id
-          );
-
-          console.log('🗑 Deleted Service Message');
-
-        } catch (err) {}
-
-      }
-
-    }
-
-  } catch (err) {
-
-    console.log(
-      'Delete Error:',
-      err.message
-    );
-
-  }
-
-}
 
 // ===================== CLOCK LOOP =====================
 
 async function updateChannels() {
-
   for (const channel of db.channels) {
-
     if (!channel.enabled) continue;
 
     try {
+      const newTitle = buildTitle(channel.prefix);
 
-      const newTitle = buildTitle(
-        channel.prefix
-      );
+      if (channel.lastTitle === newTitle) continue;
 
-      if (
-        channel.lastTitle === newTitle
-      ) {
-        continue;
-      }
-
-      // change title
-      await bot.telegram.setChatTitle(
-        channel.chatId,
-        newTitle
-      );
-
-      // delete telegram service message
-      setTimeout(async () => {
-
-        await deleteServiceMessage(
-          channel.chatId
-        );
-
-      }, 3000);
-
-      // update bio
-      await bot.telegram.setChatDescription(
-        channel.chatId,
-        buildBio()
-      );
+      await bot.telegram.setChatTitle(channel.chatId, newTitle);
+      await bot.telegram.setChatDescription(channel.chatId, buildBio());
 
       channel.lastTitle = newTitle;
-
       saveDB();
 
-      console.log(
-        `✅ Updated ${channel.chatId}`
-      );
-
+      console.log(`✅ Updated ${channel.chatId}`);
     } catch (err) {
-
-      console.log(
-        `❌ ${channel.chatId}`,
-        err.description || err.message
-      );
-
+      console.log(`❌ ${channel.chatId} |`, err.description || err.message);
     }
 
-    // anti flood
-    await new Promise(r =>
-      setTimeout(r, 2500)
-    );
-
+    await new Promise(r => setTimeout(r, 2500)); // anti-flood
   }
-
 }
 
 // ===================== AUTO LOOP =====================
 
-setInterval(
-  updateChannels,
-  UPDATE_INTERVAL
-);
-
+setInterval(updateChannels, UPDATE_INTERVAL);
 updateChannels();
 
 // ===================== LAUNCH =====================
 
-bot.launch();
+bot.launch()
+  .then(() => console.log('🚀 Clock Bot Started'))
+  .catch(err => console.error('Launch Error:', err));
 
-console.log(
-  '🚀 Clock Bot Started'
-);
-
-// ===================== SAFE STOP =====================
-
-process.once(
-  'SIGINT',
-  () => bot.stop('SIGINT')
-);
-
-process.once(
-  'SIGTERM',
-  () => bot.stop('SIGTERM')
-);
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
