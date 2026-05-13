@@ -90,16 +90,16 @@ function buildTitle(prefix = '') {
   return `${clockEmoji()} ${prefix} ${tehranTimeFancy()}`.trim();
 }
 
-// ===================== BUILD BIO (بهبود یافته) =====================
+// ===================== BUILD BIO (ساده و پایدار) =====================
 
 function buildBio() {
   const timeLine = `🕒 Time : ${tehranTimeFancy()}`;
   const dateLine = `📅 Date : ${jalaliDate()}`;
   const zoneLine = `🌍 Zone : ${fancyEnglish('Asia/Tehran')}`;
 
-  const centeredTime = centerText(timeLine, 34);
-  const centeredDate = centerText(dateLine, 34);
-  const centeredZone = centerText(zoneLine, 34);
+  const centeredTime = centerText(timeLine);
+  const centeredDate = centerText(dateLine);
+  const centeredZone = centerText(zoneLine);
 
   return `
 ╭──⌈ ⏰ ${fancyEnglish('LIVE CLOCK')} ⌋──╮
@@ -112,18 +112,11 @@ ${centeredZone}
 `.trim();
 }
 
-// تابع وسط‌چین پیشرفته
-function centerText(text, width = 34) {
-  let visualLength = text.length;
-
-  // جبران عرض اضافی کاراکترهای خاص
-  visualLength += (text.match(/[🕒📅🌍]/g) || []).length * 1;     // ایموجی‌ها
-  visualLength += (text.match(/[𝟎-𝟵]/g) || []).length * 0.4;    // اعداد فانتزی
-  visualLength += (text.match(/[𝗮-𝘇]/g) || []).length * 0.3;    // حروف فانتزی
-
-  const padding = Math.max(0, width - Math.round(visualLength));
+// تابع وسط‌چین ساده و بدون کرش
+function centerText(text) {
+  const width = 34;
+  const padding = Math.max(0, width - text.length);
   const leftPad = Math.floor(padding / 2);
-
   return ' '.repeat(leftPad) + text;
 }
 
@@ -179,8 +172,7 @@ Result:
 `.trim());
 });
 
-// ===================== ADD =====================
-
+// بقیه کامندها بدون تغییر
 bot.command('add', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const parts = ctx.message.text.split(' ');
@@ -198,8 +190,6 @@ bot.command('add', (ctx) => {
   ctx.reply('✅ Added');
 });
 
-// ===================== REMOVE =====================
-
 bot.command('remove', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const chatId = Number(ctx.message.text.split(' ')[1]);
@@ -207,8 +197,6 @@ bot.command('remove', (ctx) => {
   saveDB();
   ctx.reply('🗑 Removed');
 });
-
-// ===================== LIST =====================
 
 bot.command('list', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
@@ -221,8 +209,6 @@ Status : ${c.enabled ? '🟢 ON' : '🔴 OFF'}
 `.trim()).join('\n\n');
   ctx.reply(text);
 });
-
-// ===================== ON / OFF =====================
 
 bot.command('on', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
@@ -244,8 +230,6 @@ bot.command('off', (ctx) => {
   ctx.reply('🔴 Disabled');
 });
 
-// ===================== SET PREFIX =====================
-
 bot.command('setprefix', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
   const parts = ctx.message.text.split(' ');
@@ -257,8 +241,6 @@ bot.command('setprefix', (ctx) => {
   saveDB();
   ctx.reply('✅ Prefix Updated');
 });
-
-// ===================== START / STOP =====================
 
 bot.command('startclock', (ctx) => {
   if (!isOwner(ctx.from.id)) return;
