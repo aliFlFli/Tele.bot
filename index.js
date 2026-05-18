@@ -15,14 +15,19 @@ const os = require('os');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const OWNER_ID = Number(process.env.OWNER_ID);
-
 const PORT = process.env.PORT || 3000;
 
-const bot = new Telegraf(BOT_TOKEN);
+if (!BOT_TOKEN) {
+  console.log('BOT_TOKEN NOT FOUND');
+  process.exit(1);
+}
 
+const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 
 const DATA_FILE = './database.json';
+
+let running = false;
 
 // =====================================================
 // DATABASE
@@ -39,14 +44,18 @@ let db = {
 try {
 
   if (fs.existsSync(DATA_FILE)) {
-    db = JSON.parse(
-      fs.readFileSync(DATA_FILE, 'utf8')
-    );
+
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+
+    if (raw.trim()) {
+      db = JSON.parse(raw);
+    }
+
   }
 
-} catch {
+} catch (e) {
 
-  console.log('NEW DATABASE');
+  console.log('DATABASE RESET');
 
 }
 
@@ -61,7 +70,7 @@ function saveDB() {
 
   } catch (e) {
 
-    console.log('DB ERROR', e.message);
+    console.log('DB SAVE ERROR', e.message);
 
   }
 
@@ -145,9 +154,32 @@ const themes = [
 // HELPERS
 // =====================================================
 
+function delay(ms) {
+
+  return new Promise(r => setTimeout(r, ms));
+
+}
+
+function isOwner(id) {
+
+  return id === OWNER_ID;
+
+}
+
+function getFrame(arr) {
+
+  return arr[
+    Math.floor(Date.now() / 1000) % arr.length
+  ];
+
+}
+
 function getTheme(channel) {
 
-  if (channel.theme) {
+  if (
+    channel.theme &&
+    channel.theme !== 'auto'
+  ) {
 
     const found = themes.find(
       t => t.name === channel.theme
@@ -163,21 +195,16 @@ function getTheme(channel) {
 
 }
 
-function getFrame(arr) {
-
-  return arr[
-    Math.floor(Date.now()/1000) % arr.length
-  ];
-
-}
-
 function getTime(font='bold') {
 
   return applyFont(
+
     moment()
       .tz('Asia/Tehran')
       .format('HH:mm'),
+
     font
+
   );
 
 }
@@ -187,8 +214,11 @@ function getDate(font='bold') {
   const j = jalaali.toJalaali(new Date());
 
   return applyFont(
+
     `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')}`,
+
     font
+
   );
 
 }
@@ -197,9 +227,7 @@ function buildTitle(channel) {
 
   const t = getTheme(channel);
 
-  const icon = getFrame(t.emoji);
-
-  return `${icon} ${t.deco} ${channel.prefix || ''} ${getTime(t.font)}`.trim();
+  return `${getFrame(t.emoji)} ${t.deco} ${channel.prefix || ''} ${getTime(t.font)}`.trim();
 
 }
 
@@ -207,19 +235,15 @@ function buildBio(channel) {
 
   const t = getTheme(channel);
 
-  const icon = getFrame(t.emoji);
-
   return `
 ╭──⌈ ${t.deco} CLOCK OS ${t.deco} ⌋──╮
 
-${icon} Time : ${getTime(t.font)}
+${getFrame(t.emoji)} Time : ${getTime(t.font)}
 📅 Date : ${getDate(t.font)}
 🌍 Zone : Asia/Tehran
 
 🎭 Theme : ${t.name}
-⚙ Runtime : Railway
 📡 Status : ONLINE
-
 ⚡ Updates : ${db.stats.updates}
 
 ╰──────────────╯
@@ -227,27 +251,17 @@ ${icon} Time : ${getTime(t.font)}
 
 }
 
-function isOwner(id) {
-
-  return id === OWNER_ID;
-
-}
-
-function delay(ms) {
-
-  return new Promise(r => setTimeout(r, ms));
-
-}
-
 // =====================================================
-// EXPRESS DASHBOARD
+// WEB SERVER
 // =====================================================
 
 app.get('/', (req, res) => {
 
   res.send(`
   <html>
+
   <head>
+
     <title>CLOCK OS</title>
 
     <style>
@@ -256,14 +270,14 @@ app.get('/', (req, res) => {
         background:#0f0f0f;
         color:white;
         font-family:sans-serif;
-        padding:30px;
+        padding:20px;
       }
 
       .card{
-        background:#1a1a1a;
+        background:#1b1b1b;
         padding:20px;
-        margin:10px 0;
         border-radius:15px;
+        margin-bottom:15px;
       }
 
       .on{
@@ -283,14 +297,18 @@ app.get('/', (req, res) => {
     <h1>⚡ CLOCK OS</h1>
 
     <div class="card">
+
       <h3>Channels : ${db.channels.length}</h3>
+
       <h3>Updates : ${db.stats.updates}</h3>
+
       <h3>Uptime : ${Math.floor(process.uptime())}s</h3>
-      <h3>RAM : ${(os.totalmem()/1024/1024/1024).toFixed(1)} GB</h3>
+
+      <h3>RAM : ${(process.memoryUsage().rss / 1024 / 1024).toFixed(1)} MB</h3>
+
     </div>
 
-    ${
-      db.channels.map(c => `
+    ${db.channels.map(c => `
 
       <div class="card">
 
@@ -298,34 +316,32 @@ app.get('/', (req, res) => {
 
         <p>ID : ${c.chatId}</p>
 
-        <p class="${c.enabled ? 'on':'off'}">
-          ${c.enabled ? 'ONLINE':'OFFLINE'}
-        </p>
+        <p>Theme : ${c.theme}</p>
 
-        <p>Theme : ${c.theme || 'auto'}</p>
+        <p class="${c.enabled ? 'on':'off'}">
+
+          ${c.enabled ? 'ONLINE':'OFFLINE'}
+
+        </p>
 
       </div>
 
-      `).join('')
-    }
+    `).join('')}
 
   </body>
+
   </html>
   `);
 
 });
 
-app.listen(PORT, () => {
-
-  console.log('WEB ONLINE', PORT);
-
-});
-
 // =====================================================
-// BOT COMMANDS
+// COMMANDS
 // =====================================================
 
 bot.start(ctx => {
+
+  if (!ctx.from) return;
 
   if (!isOwner(ctx.from.id)) return;
 
@@ -335,15 +351,15 @@ bot.start(ctx => {
 /add -100id name
 /remove id
 /list
+
 /on id
 /off id
 
-/theme id cyber
 /themes
+/theme id name
 
 /stats
 /ping
-/runtime
   `.trim());
 
 });
@@ -353,6 +369,8 @@ bot.start(ctx => {
 // =====================================================
 
 bot.command('ping', ctx => {
+
+  if (!ctx.from) return;
 
   if (!isOwner(ctx.from.id)) return;
 
@@ -366,14 +384,16 @@ bot.command('ping', ctx => {
 
 bot.command('stats', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   ctx.reply(`
-📡 CHANNELS : ${db.channels.length}
+📡 Channels : ${db.channels.length}
 
-⚡ UPDATES : ${db.stats.updates}
+⚡ Updates : ${db.stats.updates}
 
-🕒 UPTIME : ${Math.floor(process.uptime())}s
+🕒 Uptime : ${Math.floor(process.uptime())} sec
 
 💾 RAM : ${(process.memoryUsage().rss / 1024 / 1024).toFixed(1)} MB
   `.trim());
@@ -386,10 +406,16 @@ bot.command('stats', ctx => {
 
 bot.command('themes', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   ctx.reply(
-    themes.map(t => `🎭 ${t.name}`).join('\n')
+
+    themes
+      .map(t => `🎭 ${t.name}`)
+      .join('\n')
+
   );
 
 });
@@ -400,6 +426,8 @@ bot.command('themes', ctx => {
 
 bot.command('add', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   const args = ctx.message.text.split(' ');
@@ -407,7 +435,9 @@ bot.command('add', ctx => {
   const chatId = Number(args[1]);
 
   if (!chatId) {
-    return ctx.reply('❌ invalid');
+
+    return ctx.reply('❌ invalid id');
+
   }
 
   const prefix = args.slice(2).join(' ');
@@ -417,7 +447,9 @@ bot.command('add', ctx => {
   );
 
   if (exists) {
+
     return ctx.reply('⚠ already exists');
+
   }
 
   db.channels.push({
@@ -445,6 +477,8 @@ bot.command('add', ctx => {
 
 bot.command('remove', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   const id = Number(
@@ -467,10 +501,14 @@ bot.command('remove', ctx => {
 
 bot.command('list', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   if (!db.channels.length) {
+
     return ctx.reply('empty');
+
   }
 
   ctx.reply(
@@ -486,15 +524,20 @@ bot.command('list', ctx => {
 ${c.enabled ? '🟢 ON':'🔴 OFF'}
 
     `).join('\n')
+
   );
 
 });
 
 // =====================================================
-// ON/OFF
+// ON
 // =====================================================
 
 bot.command('on', ctx => {
+
+  if (!ctx.from) return;
+
+  if (!isOwner(ctx.from.id)) return;
 
   const id = Number(
     ctx.message.text.split(' ')[1]
@@ -504,7 +547,11 @@ bot.command('on', ctx => {
     x => x.chatId === id
   );
 
-  if (!c) return;
+  if (!c) {
+
+    return ctx.reply('❌ not found');
+
+  }
 
   c.enabled = true;
 
@@ -514,7 +561,15 @@ bot.command('on', ctx => {
 
 });
 
+// =====================================================
+// OFF
+// =====================================================
+
 bot.command('off', ctx => {
+
+  if (!ctx.from) return;
+
+  if (!isOwner(ctx.from.id)) return;
 
   const id = Number(
     ctx.message.text.split(' ')[1]
@@ -524,7 +579,11 @@ bot.command('off', ctx => {
     x => x.chatId === id
   );
 
-  if (!c) return;
+  if (!c) {
+
+    return ctx.reply('❌ not found');
+
+  }
 
   c.enabled = false;
 
@@ -540,6 +599,8 @@ bot.command('off', ctx => {
 
 bot.command('theme', ctx => {
 
+  if (!ctx.from) return;
+
   if (!isOwner(ctx.from.id)) return;
 
   const args = ctx.message.text.split(' ');
@@ -553,21 +614,28 @@ bot.command('theme', ctx => {
   );
 
   if (!c) {
+
     return ctx.reply('❌ channel not found');
+
   }
 
   if (
+
     theme !== 'auto' &&
+
     !themes.find(t => t.name === theme)
+
   ) {
+
     return ctx.reply('❌ invalid theme');
+
   }
 
   c.theme = theme;
 
   saveDB();
 
-  ctx.reply('🎭 theme updated');
+  ctx.reply('🎭 updated');
 
 });
 
@@ -598,8 +666,6 @@ bot.on('channel_post', async ctx => {
 // UPDATE ENGINE
 // =====================================================
 
-let running = false;
-
 async function tick() {
 
   if (running) return;
@@ -617,7 +683,9 @@ async function tick() {
         const title = buildTitle(c);
 
         if (title === c.last) {
+
           continue;
+
         }
 
         const bio = buildBio(c);
@@ -640,8 +708,7 @@ async function tick() {
 
         console.log(
           'UPDATED',
-          c.chatId,
-          title
+          c.chatId
         );
 
       } catch (e) {
@@ -652,16 +719,19 @@ async function tick() {
           e.response?.description ||
           e.message;
 
-        console.log('ERROR', msg);
+        console.log(
+          'UPDATE ERROR:',
+          msg
+        );
 
         if (
+
           msg &&
           msg.toLowerCase().includes(
             'too many requests'
           )
-        ) {
 
-          console.log('FLOOD WAIT');
+        ) {
 
           await delay(15000);
 
@@ -688,28 +758,67 @@ setInterval(tick, 60000);
 tick();
 
 // =====================================================
+// START WEB
+// =====================================================
+
+app.listen(PORT, () => {
+
+  console.log(
+    `🌐 WEB ONLINE ${PORT}`
+  );
+
+});
+
+// =====================================================
+// START BOT
+// =====================================================
+
+(async () => {
+
+  try {
+
+    await bot.launch({
+
+      dropPendingUpdates:true
+
+    });
+
+    console.log(
+      '🚀 BOT ONLINE'
+    );
+
+  } catch (e) {
+
+    console.log(
+      'BOT START ERROR',
+      e.message
+    );
+
+  }
+
+})();
+
+// =====================================================
 // ERRORS
 // =====================================================
 
 process.on('unhandledRejection', err => {
 
-  console.log('UNHANDLED', err);
+  console.log(
+    'UNHANDLED',
+    err
+  );
 
 });
 
 process.on('uncaughtException', err => {
 
-  console.log('CRASH', err);
+  console.log(
+    'CRASH',
+    err
+  );
 
 });
-
-// =====================================================
-// START
-// =====================================================
-
-bot.launch();
-
-console.log('🚀 CLOCK OS V2 ONLINE');
 
 // =====================================================
 // EXIT
